@@ -1,0 +1,5 @@
+kafka-python==2.3.0
+datetime
+pendulum
+apache-airflow==3.1.5
+great-expectations == 1.10.0
