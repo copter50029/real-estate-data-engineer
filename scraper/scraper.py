@@ -1,5 +1,6 @@
 from scrapling.fetchers import Fetcher
 from urllib.parse import quote_plus
+import json
 
 us_states = [
   { "name": "Alabama", "abbreviation": "AL", "capital": "Montgomery" },
@@ -54,11 +55,60 @@ us_states = [
   { "name": "Wyoming", "abbreviation": "WY", "capital": "Cheyenne" }
 ]
 # texas
-base_url = "https://www.zillow.com"
-picked_state = us_states[37]
-location_encoded  = quote_plus(picked_state["capital"] + ", " + picked_state["abbreviation"])
-url = f"{base_url}/{location_encoded}/"
+def get_url(state):
+    base_url = "https://www.zillow.com"
+    location_encoded  = quote_plus(state["capital"] + ", " + state["abbreviation"])
+    url = f"{base_url}/{location_encoded}/"
+    return url
+def get_listings(url):
+    print(f"Fetching {url}...")
+    response = Fetcher.get(url)
+    
+    # 1. Try to find the hidden JSON data
+    json_raw = response.css('#__NEXT_DATA__::text').get()
+    # print("raw :",json_raw)
+    if json_raw:
+        try:
+            data = json.loads(json_raw)
+            # Debug: Save JSON to file once to inspect structure if needed
+            with open('debug_zillow.json', 'w') as f:
+                json.dump(data, f, indent=2)
 
+            # Modern Zillow JSON path search
+            # We look for 'listResults' anywhere in the object
+            def find_listings(obj):
+                if isinstance(obj, dict):
+                    if 'listResults' in obj:
+                        return obj['listResults']
+                    for v in obj.values():
+                        result = find_listings(v)
+                        if result: return result
+                    
+                elif isinstance(obj, list):
+                    for item in obj:
+                        result = find_listings(item)
+                        if result: return result
+                return None
+
+            results = find_listings(data)
+            if results:
+                print(f"Found {len(results)} listings in JSON!")
+                return results
+        except Exception as e:
+            print(f"JSON Parse Error: {e}")
+
+    # 2. Fallback to CSS (Still only gets ~9)
+    print("Falling back to CSS selectors (Limited results)")
+    cards = response.css('article[data-test="property-card"]')
+    return cards
+
+picked_state = us_states[20]
+url = get_url(picked_state)
 print(url)
-# response = Fetcher.get(url)
-# print(response.body)
+listings = get_listings(url)
+print(listings[1], "\n")
+print(listings[2], "\n")
+print(len(listings))
+
+with open('data.txt', 'w') as f:
+    f.write(str(listings))
