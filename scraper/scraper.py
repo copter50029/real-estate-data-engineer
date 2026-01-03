@@ -2,6 +2,7 @@ from scrapling.fetchers import Fetcher
 from urllib.parse import quote_plus
 import json
 import time
+
 us_states = [
   { "name": "Alabama", "abbreviation": "AL", "capital": "Montgomery" },
   { "name": "Alaska", "abbreviation": "AK", "capital": "Juneau" },
@@ -123,6 +124,8 @@ def extract_data(response):
     print("Falling back to CSS selectors (Limited results)")
     cards = response.css('article[data-test="property-card"]')
     return cards
+def convert_json(data):
+    return json.dumps(data)
 
 picked_state = us_states[20]
 
@@ -131,4 +134,4 @@ listings = get_listings(picked_state ,2)
 print(len(listings))
 
 with open('data.txt', 'w') as f:
-    f.write(str(listings))
+    f.write(str(convert_json(listings)))
