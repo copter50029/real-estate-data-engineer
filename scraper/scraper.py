@@ -1,7 +1,7 @@
 from scrapling.fetchers import Fetcher
 from urllib.parse import quote_plus
 import json
-
+import time
 us_states = [
   { "name": "Alabama", "abbreviation": "AL", "capital": "Montgomery" },
   { "name": "Alaska", "abbreviation": "AK", "capital": "Juneau" },
@@ -50,20 +50,41 @@ us_states = [
   { "name": "Vermont", "abbreviation": "VT", "capital": "Montpelier" },
   { "name": "Virginia", "abbreviation": "VA", "capital": "Richmond" },
   { "name": "Washington", "abbreviation": "WA", "capital": "Olympia" },
+  { "name": "Oregon", "abbreviation": "OR", "capital": "Salem" },
+  { "name": "Pennsylvania", "abbreviation": "PA", "capital": "Harrisburg" },
+  { "name": "Rhode Island", "abbreviation": "RI", "capital": "Providence" },
+  { "name": "South Carolina", "abbreviation": "SC", "capital": "Columbia" },
+  { "name": "South Dakota", "abbreviation": "SD", "capital": "Pierre" },
+  { "name": "Tennessee", "abbreviation": "TN", "capital": "Nashville" },
+  { "name": "Texas", "abbreviation": "TX", "capital": "Austin" },
+  { "name": "Utah", "abbreviation": "UT", "capital": "Salt Lake City" },
+  { "name": "Vermont", "abbreviation": "VT", "capital": "Montpelier" },
+  { "name": "Virginia", "abbreviation": "VA", "capital": "Richmond" },
+  { "name": "Washington", "abbreviation": "WA", "capital": "Olympia" },
   { "name": "West Virginia", "abbreviation": "WV", "capital": "Charleston" },
   { "name": "Wisconsin", "abbreviation": "WI", "capital": "Madison" },
   { "name": "Wyoming", "abbreviation": "WY", "capital": "Cheyenne" }
 ]
-# texas
-def get_url(state):
+
+def get_listings(state, maxpage):
+    listing = []
     base_url = "https://www.zillow.com"
     location_encoded  = quote_plus(state["capital"] + ", " + state["abbreviation"])
-    url = f"{base_url}/{location_encoded}/"
-    return url
-def get_listings(url):
-    print(f"Fetching {url}...")
-    response = Fetcher.get(url)
-    
+    for page_num in range(1,maxpage+1):
+        print(f"Fetching Page {page_num}")
+        print(f"Fetching Url {base_url}")
+        if page_num==1:
+            url = f"{base_url}/{location_encoded}/"
+        else:
+            url = f"{base_url}/{location_encoded}/{page_num}_p"
+
+        
+        response = Fetcher.get(url)
+        listing += extract_data(response)
+        if page_num<maxpage:
+            time.sleep(5)
+    return listing
+def extract_data(response):
     # 1. Try to find the hidden JSON data
     json_raw = response.css('#__NEXT_DATA__::text').get()
     # print("raw :",json_raw)
@@ -71,8 +92,9 @@ def get_listings(url):
         try:
             data = json.loads(json_raw)
             # Debug: Save JSON to file once to inspect structure if needed
-            with open('debug_zillow.json', 'w') as f:
-                json.dump(data, f, indent=2)
+
+            # with open('debug_zillow.json', 'w') as f:
+            #     json.dump(data, f, indent=2)
 
             # Modern Zillow JSON path search
             # We look for 'listResults' anywhere in the object
@@ -103,11 +125,9 @@ def get_listings(url):
     return cards
 
 picked_state = us_states[20]
-url = get_url(picked_state)
-print(url)
-listings = get_listings(url)
-print(listings[1], "\n")
-print(listings[2], "\n")
+
+listings = get_listings(picked_state ,2)
+
 print(len(listings))
 
 with open('data.txt', 'w') as f:
