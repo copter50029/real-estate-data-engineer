@@ -212,7 +212,8 @@ Docker/config/
 Docker/dags/__pycache__/
 Docker/plugins
 
+# Scraper
 /scraper/my_scraper.py
 /scraper/examples.py
 scraper/debug_zillow.json
-scraper/data.txt
+scraper/data.json

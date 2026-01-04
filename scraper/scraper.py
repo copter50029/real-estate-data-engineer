@@ -125,7 +125,7 @@ def extract_data(response):
     cards = response.css('article[data-test="property-card"]')
     return cards
 def convert_json(data):
-    return json.dumps(data)
+    return json.dumps(data,indent = 4)
 
 picked_state = us_states[20]
 
@@ -133,5 +133,5 @@ listings = get_listings(picked_state ,2)
 
 print(len(listings))
 
-with open('data.txt', 'w') as f:
+with open('data.json', 'r+') as f:
     f.write(str(convert_json(listings)))
