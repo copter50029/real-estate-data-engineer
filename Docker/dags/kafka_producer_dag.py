@@ -16,7 +16,7 @@ default_args = {
 
 def main():
     producer = KafkaProducer(
-        bootstrap_servers=["broker1:29092"],
+        bootstrap_servers=["broker1:29292"],
         value_serializer=lambda x: json.dumps(x).encode("utf-8"),
     )
     for i in range(10):
