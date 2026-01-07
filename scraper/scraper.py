@@ -127,11 +127,13 @@ def extract_data(response):
 def convert_json(data):
     return json.dumps(data,indent = 4)
 
-picked_state = us_states[20]
 
-listings = get_listings(picked_state ,2)
+if __name__ == "__main__":
+    picked_state = us_states[20]
 
-print(len(listings))
+    listings = get_listings(picked_state ,2)
 
-with open('data.json', 'r+') as f:
-    f.write(str(convert_json(listings)))
+    print(len(listings))
+
+    with open('data.json', 'w') as f:
+        f.write(str(convert_json(listings)))
