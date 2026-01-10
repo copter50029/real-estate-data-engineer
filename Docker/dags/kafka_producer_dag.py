@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import json
 import logging
 import time
-from scraper import get_listings, us_states
+from scraper.scraper import get_listings, us_states
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
@@ -35,7 +35,7 @@ with DAG(
     default_args=default_args,
     description="A simple DAG to produce dummy Kafka json data",
     schedule=timedelta(minutes=1),
-    start_date=datetime(2023, 1, 1),
+    start_date=datetime.now(),
     catchup=False,
 ) as dag:
     produce_task = PythonOperator(

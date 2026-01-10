@@ -70,14 +70,14 @@ us_states = [
 def get_listings(state, maxpage):
     listing = []
     base_url = "https://www.zillow.com"
-    location_encoded  = quote_plus(state["capital"] + ", " + state["abbreviation"])
+    location  = state["name"]
     for page_num in range(1,maxpage+1):
         print(f"Fetching Page {page_num}")
         print(f"Fetching Url {base_url}")
         if page_num==1:
-            url = f"{base_url}/{location_encoded}/"
+            url = f"{base_url}/{location}/"
         else:
-            url = f"{base_url}/{location_encoded}/{page_num}_p"
+            url = f"{base_url}/{location}/{page_num}_p"
 
         
         response = Fetcher.get(url)
