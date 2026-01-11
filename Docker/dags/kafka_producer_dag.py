@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import json
 import logging
 import time
-from scraper.scraper import get_listings, us_states
+from scraper import get_listings, us_states
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
@@ -22,7 +22,7 @@ def main():
         retries=3,   # Retry failed sends
         max_in_flight_requests_per_connection=1  # Ensure ordering
     )
-    for i in range(10):
+    for i in range(41):
         data= get_listings(us_states[i], 1)
         for listing in data:
             producer.send("house_data", value=listing)
@@ -31,14 +31,14 @@ def main():
 
 
 with DAG(
-    "kafka_producer",
+    "Zillow_Scraper",
     default_args=default_args,
-    description="A simple DAG to produce dummy Kafka json data",
+    description="Scrapes Zillow data and sends it to Kafka",
     schedule=timedelta(minutes=1),
     start_date=datetime.now(),
     catchup=False,
 ) as dag:
     produce_task = PythonOperator(
-        task_id="produce_dummy_data",
+        task_id="Zillow_Scraper",
         python_callable=main,
     )

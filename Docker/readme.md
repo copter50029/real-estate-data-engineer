@@ -7,6 +7,7 @@
 ```bash
 mkdir -p ./dags ./logs ./plugins ./config
 echo -e "AIRFLOW_UID=$(id -u)" > .env
+echo -e "SPARK_NO_DAEMONIZE=true" > .env.spark
 ```
 
 ### 2. Initialize the Database
@@ -18,6 +19,7 @@ docker compose up airflow-init
 ```
 
 **Wait for initialization to complete.** You should see:
+
 ```
 airflow-init-1 exited with code 0
 ```

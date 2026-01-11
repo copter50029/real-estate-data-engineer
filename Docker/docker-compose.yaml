@@ -413,10 +413,60 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+  spark-master:
+    container_name: da-spark-master
+    # build: ../spark-cluster  # for building custom image
+    image: puppies/spark-cluster
+    entrypoint: ["./entrypoint.sh", "master"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    volumes:
+      - spark-logs:/opt/spark/spark-events
+      - ./spark:/opt/spark/apps
+    env_file:
+      - .env.spark
+    ports:
+      - "9090:8080"
+      - "7077:7077"
+    networks:
+      real-estate-network:
 
+  spark-history-server:
+    container_name: da-spark-history
+    image: puppies/spark-cluster
+    entrypoint: ["./entrypoint.sh", "history"]
+    depends_on:
+      - spark-master
+    env_file:
+      - .env.spark
+    volumes:
+      - spark-logs:/opt/spark/spark-events
+      - ./spark:/opt/spark/apps
+    ports:
+      - "18080:18080"
+    networks:
+      real-estate-network:
+
+  spark-worker:
+    container_name: da-spark-worker
+    image: puppies/spark-cluster
+    entrypoint: ["./entrypoint.sh", "worker"]
+    depends_on:
+      - spark-master
+    env_file:
+      - .env.spark
+    volumes:
+      - spark-logs:/opt/spark/spark-events
+      - ./spark:/opt/spark/apps
+    networks:
+      real-estate-network:
 volumes:
   postgres-db-volume:
   postgis-db-volume:
+  spark-logs:
 
 networks:
   real-estate-network:
