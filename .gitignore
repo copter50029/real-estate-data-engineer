@@ -221,3 +221,4 @@ scraper/data.json
 
 # spark
 /Docker/.env.spark
+*.json
