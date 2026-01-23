@@ -132,13 +132,14 @@ with DAG(
     max_active_tasks=2,
 ) as dag:
     for producer_task in range(41):
+        name = us_states[producer_task]['name'].replace(" ", "_")
         produce_task = PythonOperator(
-            task_id=f"Zillow_Scraper_{us_states[producer_task]['name']}",
+            task_id=f"Zillow_Scraper_{name}",
             python_callable=extract,
             op_args=[producer_task],
         )
         get_structure_task = PythonOperator(
-            task_id=f"Get_Structure_{us_states[producer_task]['name']}",
+            task_id=f"Get_Structure_{name}",
             python_callable=get_structure,
             op_args=[produce_task.output],
 
