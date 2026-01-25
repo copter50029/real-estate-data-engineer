@@ -13,20 +13,16 @@ default_args = {
     "email_on_retry": False,
 }
 
-
+producer = KafkaProducer(
+    bootstrap_servers=["broker1:29292"],
+    value_serializer=lambda x: json.dumps(x).encode("utf-8"),
+    acks='all',  # Wait for all replicas to acknowledge
+    retries=3,   # Retry failed sends
+    max_in_flight_requests_per_connection=1  # Ensure ordering
+    )
 def  extract(producer_task):
     data= get_listings(us_states[producer_task], 1)
-    return data
-
-def get_structure(data):
-
-    producer = KafkaProducer(
-        bootstrap_servers=["broker1:29292"],
-        value_serializer=lambda x: json.dumps(x).encode("utf-8"),
-        acks='all',  # Wait for all replicas to acknowledge
-        retries=3,   # Retry failed sends
-        max_in_flight_requests_per_connection=1  # Ensure ordering
-    )
+    
     def get_nested(data, keys):
         try:
             for key in keys:
@@ -34,8 +30,10 @@ def get_structure(data):
             return data
         except (KeyError, TypeError):
             return None
+    
     for i in range(len(data)):   
         schema = {}
+        schema["id"] =  data[i].get("id")
         schema["rawHomeStatusCd"] = data[i].get("rawHomeStatusCd")
         schema["marketingStatusSimplifiedCd"] = data[i].get("marketingStatusSimplifiedCd")
         schema["imgSrc"] = data[i].get("imgSrc")
@@ -119,8 +117,9 @@ def get_structure(data):
         schema["isPaidBuilderNewConstruction"] = data[i].get("isPaidBuilderNewConstruction")
         producer.send("house_data", value=schema)
         logging.info(f"Sent data to Kafka: {schema}")
-    producer.flush()
-    producer.close()
+        time.sleep(30) 
+    producer.flush() 
+    producer.close() 
 with DAG(
     "Zillow_Scraper",
     default_args=default_args,
@@ -129,7 +128,7 @@ with DAG(
     start_date=datetime.now(),
     catchup=False,
     # max task for dag it limit scraper to run at the same time for avoid bot detection
-    max_active_tasks=2,
+    max_active_tasks=1,
 ) as dag:
     for producer_task in range(41):
         name = us_states[producer_task]['name'].replace(" ", "_")
@@ -137,10 +136,4 @@ with DAG(
             task_id=f"Zillow_Scraper_{name}",
             python_callable=extract,
             op_args=[producer_task],
-        )
-        get_structure_task = PythonOperator(
-            task_id=f"Get_Structure_{name}",
-            python_callable=get_structure,
-            op_args=[produce_task.output],
-
         )

@@ -297,24 +297,6 @@ services:
         condition: service_completed_successfully
     networks:
       - real-estate-network
-  postgis:
-    image: postgis/postgis:18-3.6
-    environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
-      POSTGRES_DB: real-estate
-    volumes:
-      - postgis-db-volume:/var/lib/postgresql
-    ports:
-      - "5433:5432"
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "admin"]
-      interval: 10s
-      retries: 5
-      start_period: 5s
-    restart: always
-    networks:
-      - real-estate-network
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.7
     hostname: zookeeper
@@ -465,9 +447,28 @@ services:
       - ./spark:/opt/spark/apps
     networks:
       real-estate-network:
+  database:
+    image: postgres
+    container_name: real-estate-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: realestate
+    volumes:
+      - realestate-db-volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: always
+    networks:
+      - real-estate-network
 volumes:
   postgres-db-volume:
-  postgis-db-volume:
+  realestate-db-volume:
   spark-logs:
 
 networks:
