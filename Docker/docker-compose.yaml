@@ -448,16 +448,16 @@ services:
     networks:
       real-estate-network:
   database:
-    image: postgres
+    image: postgis/postgis
     container_name: real-estate-postgres
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: realestate
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: real_estate_db
     volumes:
-      - realestate-db-volume:/var/lib/postgresql/data
+      - realestate-db-volume:/var/lib/postgresql/19/docker
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 10s

@@ -1,27 +1,23 @@
 import pyspark
-import json
 import datetime
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, from_json, schema_of_json
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType, LongType, DoubleType , BooleanType , ShortType , DateType , TimestampType
+from pyspark.sql.functions import col
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType, LongType, DoubleType , BooleanType , ShortType , TimestampType
+from pyspark.sql.functions import from_json, col,regexp_replace, to_timestamp
 
-spark = SparkSession.builder \
-    .appName("PostgresWriteExample") \
-    .config("spark.jars", "postgresql-42.7.9.jar") \
-    .getOrCreate()
 
 if __name__ == "__main__":
     spark = SparkSession.builder \
     .appName("KafkaFraudDetectionStream") \
     .master("local[*]") \
     .config("spark.jars.packages", "org.apache.spark:spark-streaming-kafka-0-10_2.13:4.0.0,org.apache.spark:spark-sql-kafka-0-10_2.13:4.0.0") \
-    .config("spark.jars", "postgresql-42.7.9.jar") \
+    .config("spark.jars", "/opt/spark/apps/postgresql-42.7.9.jar") \
     .getOrCreate()
     spark.sparkContext.setLogLevel("WARN")
     first_run = True
     # 2. Define schema for Kafka JSON messages (all fields from your item)
     schema = StructType([
-    StructField("id", StringType(), False),
+    StructField("id", StringType()),
     StructField("rawHomeStatusCd", StringType()),
     StructField("marketingStatusSimplifiedCd", StringType()),
     StructField("hasImage",BooleanType()), 
@@ -88,37 +84,44 @@ if __name__ == "__main__":
     if first_run:
         kafka_df = spark.readStream \
             .format("kafka") \
-            .option("kafka.bootstrap.servers", "broker1:29092") \
-            .option("subscribe", "transactions") \
-            .option("checkpointLocation", "/tmp/spark_checkpoints/kafka_transactions") \
+            .option("kafka.bootstrap.servers", "broker1:29292") \
+            .option("subscribe", "house_data") \
+            .option("checkpointLocation", "/tmp/spark_checkpoints/kafka_log") \
             .option("startingOffsets", "earliest") \
             .load()
         first_run = False
     else:
         kafka_df = spark.readStream \
             .format("kafka") \
-            .option("kafka.bootstrap.servers", "broker1:29092") \
-            .option("subscribe", "transactions") \
-            .option("checkpointLocation", "/tmp/spark_checkpoints/kafka_transactions") \
+            .option("kafka.bootstrap.servers", "broker1:29292") \
+            .option("subscribe", "house_data") \
+            .option("checkpointLocation", "/tmp/spark_checkpoints/kafka_log") \
             .option("startingOffsets", "latest") \
             .load()
-    kafka_df["openHouseStartDate"] = kafka_df["openHouseStartDate"].replace("T", " ")
-    kafka_df["openHouseEndDate"] = kafka_df["openHouseEndDate"].replace("T", " ")
+        
+    parsed_df = kafka_df.select(from_json(col("value").cast("string"), schema).alias("data")).select("data.*")
+    parsed_df = parsed_df.withColumn("openHouseStartDate", regexp_replace(col("openHouseStartDate"), "T", " "))
+    parsed_df = parsed_df.withColumn("openHouseEndDate", regexp_replace(col("openHouseEndDate"), "T", " "))
 
-    # convert to datetime objects
-    kafka_df["openHouseStartDate"] = datetime.datetime.strptime(kafka_df["openHouseStartDate"], "%Y-%m-%d %H:%M:%S")
-    kafka_df["openHouseEndDate"] = datetime.datetime.strptime(kafka_df["openHouseEndDate"], "%Y-%m-%d %H:%M:%S")
+    parsed_df = parsed_df.withColumn("openHouseStartDate", to_timestamp(col("openHouseStartDate"), "yyyy-MM-dd HH:mm:ss"))
+    parsed_df = parsed_df.withColumn("openHouseEndDate", to_timestamp(col("openHouseEndDate"), "yyyy-MM-dd HH:mm:ss"))
 
-    df = spark.createDataFrame(data=[kafka_df], schema=schema)
     table_name = "real_estate"
-    jdbc_url = "jdbc:postgresql://postgres:5432/real_estate_db"
+    jdbc_url = "jdbc:postgresql://real-estate-postgres:5432/real_estate_db"
 
-    # Write DataFrame to PostgreSQL
-    df.write.format("jdbc") \
-    .option("url", jdbc_url) \
-    .option("dbtable", table_name) \
-    .option("user", "postgres") \
-    .option("password", "postgres") \
-    .option("driver", "org.postgresql.Driver") \
-    .mode("overwrite") \
-    .save()
+    def write_to_postgres(batch_df, batch_id):
+        batch_df.write.format("jdbc") \
+            .option("url", jdbc_url) \
+            .option("dbtable", table_name) \
+            .option("user", "admin") \
+            .option("password", "admin") \
+            .option("driver", "org.postgresql.Driver") \
+            .mode("append") \
+            .save()
+
+    query = parsed_df.writeStream \
+        .foreachBatch(write_to_postgres) \
+        .outputMode("append") \
+        .start()
+
+    query.awaitTermination()
