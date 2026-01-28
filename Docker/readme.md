@@ -31,3 +31,22 @@ To remove all Airflow containers and volumes:
 ```bash
 docker compose down --volumes --remove-orphans
 ```
+### 4. init DOCKER
+
+```bash
+docker compose up -d
+```
+
+### 5. activate airflow dag
+
+```bash
+make turn-on-dag
+```
+
+### 6. submit spark job
+
+```bash
+make submit-spark-job
+```
+
+

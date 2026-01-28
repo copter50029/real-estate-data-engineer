@@ -1,4 +1,4 @@
-Submit_ML:
+submit-spark-job:
 	docker exec da-spark-master spark-submit --master spark://spark-master:7077 --packages \
 	org.apache.spark:spark-streaming-kafka-0-10_2.13:4.0.0,\
 	org.apache.spark:spark-sql-kafka-0-10_2.13:4.0.0  \
