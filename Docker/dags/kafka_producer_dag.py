@@ -117,7 +117,7 @@ def  extract(producer_task):
         schema["isPaidBuilderNewConstruction"] = data[i].get("isPaidBuilderNewConstruction")
         producer.send("house_data", value=schema)
         logging.info(f"Sent data to Kafka: {schema}")
-        time.sleep(30) 
+    time.sleep(30) 
     producer.flush() 
     producer.close() 
 with DAG(
