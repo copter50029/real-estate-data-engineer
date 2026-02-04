@@ -18,11 +18,22 @@ cur = conn.cursor()
 
 # fetch all data form data base
 cur.execute("SELECT * FROM real_estate")
-st.write(cur)
+data = cur.fetchall()
+# select image link
+if data:
+    image_link = data[0]
+    st.write(image_link[60])
+    st.markdown(f'''
+    <a href="https://google.com">
+        <img src="{image_link[60]}" width="300">
+    </a>
+''', unsafe_allow_html=True)
+else:
+    print("No data found") # Added print for consistency
+    st.write("No data found")
 
 
 
 # show all column name from database
-# column_names = [desc[0] for desc in cur.description]
-# st.write(column_names)
-
+column_names = [desc[0] for desc in cur.description]
+st.write(column_names)
