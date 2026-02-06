@@ -5,11 +5,14 @@ import pandas as pd
 # Cache the connection so it doesn't reconnect on every rerun
 @st.cache_resource
 def get_db_connection():
+    # CHANGE THIS to your laptop's IP address if running remotely (e.g., "192.168.1.50")
+    db_host = "localhost"
+    
     return psycopg2.connect(
         dbname="real_estate_db",
         user="admin",
         password="admin",
-        host="localhost",
+        host=db_host,
         port=5432
     )
 
