@@ -40,3 +40,17 @@ else:
 # show all column name from database
 column_names = [desc[0] for desc in cur.description]
 st.write(column_names)
+
+if data:
+    df = pd.DataFrame(data, columns=column_names)
+    
+    st.header("Price vs Living Area")
+    if set(['livingArea', 'price', 'homeType']).issubset(df.columns):
+        st.scatter_chart(
+            df,
+            x='livingArea',
+            y='price',
+            color='homeType'
+        )
+    else:
+        st.error("Required columns (livingArea, price, homeType) not found in the dataset.")
