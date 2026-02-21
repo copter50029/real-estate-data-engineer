@@ -67,63 +67,99 @@ us_states = [
   { "name": "Wyoming", "abbreviation": "WY", "capital": "Cheyenne" }
 ]
 
-def get_listings(state, maxpage):
-    listing = []
+def get_listings(state, maxpage_limit):
+    all_listings = []
     base_url = "https://www.zillow.com"
-    location  = state["name"]
-    for page_num in range(1,maxpage+1):
-        print(f"Fetching Page {page_num}")
-        print(f"Fetching Url {base_url}")
-        if page_num==1:
-            url = f"{base_url}/{location}/"
-        else:
-            url = f"{base_url}/{location}/{page_num}_p"
-
+    location = state["name"]
+    
+    current_page = 1
+    # We'll update this after the first request
+    actual_total_pages = maxpage_limit 
+    while current_page <= actual_total_pages and current_page <= maxpage_limit:
+        print(f"Fetching Page {current_page} of {actual_total_pages}")
         
+        url = f"{base_url}/{location}/" if current_page == 1 else f"{base_url}/{location}/{current_page}_p"
         response = Fetcher.get(url)
-        listing += extract_data(response)
-        if page_num<maxpage:
-            time.sleep(5)
-    return listing
+        
+        page_listings, total_pages_found = extract_data(response)
+        all_listings.extend(page_listings)
+        
+        # On page 1, we learn the real total pages available
+        if current_page == 1:
+            actual_total_pages = total_pages_found
+            print(f"Site reports {actual_total_pages} pages available.")
+        if current_page < actual_total_pages and current_page < maxpage_limit:
+            time.sleep(5) # Respectful delay
+            
+        current_page += 1
+            
+    return all_listings
+def find_search_data(obj):
+    """Finds the dictionary that contains listings or search results."""
+    if isinstance(obj, dict):
+        # If we found the category container (cat1, etc) or the searchResults block
+        if 'listResults' in obj or 'searchResults' in obj:
+            return obj
+        for v in obj.values():
+            result = find_search_data(v)
+            if result: return result
+    elif isinstance(obj, list):
+        for item in obj:
+            result = find_search_data(item)
+            if result: return result
+    return None
+
 def extract_data(response):
-    # 1. Try to find the hidden JSON data
     json_raw = response.css('#__NEXT_DATA__::text').get()
-    # print("raw :",json_raw)
     if json_raw:
         try:
             data = json.loads(json_raw)
-            # Debug: Save JSON to file once to inspect structure if needed
+            search_data = find_search_data(data)
+            
+            if search_data:
+                # 1. Extract Listings
+                listings = search_data.get('listResults')
+                if not listings and 'searchResults' in search_data:
+                    listings = search_data['searchResults'].get('listResults')
+                
+                if listings is None: listings = []
 
-            # with open('debug_zillow.json', 'w') as f:
-            #     json.dump(data, f, indent=2)
+                # 2. Extract Pagination (can be in search_data or search_data['searchList'])
+                max_pages = search_data.get('totalPages')
+                if not max_pages:
+                    search_list = search_data.get('searchList', {})
+                    if not isinstance(search_list, dict): search_list = {}
+                    max_pages = search_list.get('totalPages')
+                
+                if not max_pages:
+                    pagination = search_data.get('pagination') or search_data.get('searchList', {}).get('pagination', {})
+                    if isinstance(pagination, dict):
+                        max_pages = pagination.get('totalPages')
 
-            # Modern Zillow JSON path search
-            # We look for 'listResults' anywhere in the object
-            def find_listings(obj):
-                if isinstance(obj, dict):
-                    if 'listResults' in obj:
-                        return obj['listResults']
-                    for v in obj.values():
-                        result = find_listings(v)
-                        if result: return result
-                    
-                elif isinstance(obj, list):
-                    for item in obj:
-                        result = find_listings(item)
-                        if result: return result
-                return None
+                # 3. Fallback to Result Count
+                if not max_pages:
+                    total = search_data.get('totalResultCount') or search_data.get('searchList', {}).get('totalResultCount', 0)
+                    if total:
+                        max_pages = (total // 40) + 1
 
-            results = find_listings(data)
-            if results:
-                print(f"Found {len(results)} listings in JSON!")
-                return results
+                # Final Cleanup
+                if not max_pages: max_pages = 1
+                if max_pages > 20: max_pages = 20
+
+                print(f"Found {len(listings)} listings. Total pages set to: {max_pages}")
+                return listings, max_pages
+            else:
+                # Debug: if we found JSON but not the search block, save it to inspect
+                with open('failed_structure.json', 'w') as f:
+                    json.dump(data, f, indent=2)
+                print("JSON found but 'listResults' container was missing. Saved to failed_structure.json")
         except Exception as e:
             print(f"JSON Parse Error: {e}")
 
-    # 2. Fallback to CSS (Still only gets ~9)
+    # Fallback to CSS - extract HTML strings so it's JSON serializable
     print("Falling back to CSS selectors (Limited results)")
-    cards = response.css('article[data-test="property-card"]')
-    return cards
+    cards = response.css('article[data-test="property-card"]').getall()
+    return (cards, 1) 
 def convert_json(data):
     return json.dumps(data,indent = 4)
 
@@ -131,7 +167,7 @@ def convert_json(data):
 if __name__ == "__main__":
     picked_state = us_states[20]
 
-    listings = get_listings(picked_state ,2)
+    listings = get_listings(picked_state ,5)
 
     print(len(listings))
 

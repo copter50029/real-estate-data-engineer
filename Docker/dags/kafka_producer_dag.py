@@ -128,7 +128,7 @@ with DAG(
     start_date=datetime.now(),
     catchup=False,
     # max task for dag it limit scraper to run at the same time for avoid bot detection
-    max_active_tasks=1,
+    max_active_tasks=3,
 ) as dag:
     for producer_task in range(41):
         name = us_states[producer_task]['name'].replace(" ", "_")
