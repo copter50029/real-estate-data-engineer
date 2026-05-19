@@ -11,6 +11,10 @@ This project is an end-to-end Data Engineering pipeline that scrapes real estate
 3. **Stream Processing (Apache Spark)**: PySpark Structured Streaming consumes the real-time messages, applies a structured schema, formats timestamps, and cleans the data.
 4. **Data Warehouse (PostgreSQL)**: The processed data is loaded into a PostgreSQL database, ready for querying and visualization.
 
+### 📊 Dashboard Overview (PowerBI)
+![PowerBI Dashboard](powerbi_dashboard.png)
+*(Click to view the [full PDF report](Real-estate-project.pdf))*
+
 ---
 
 ## 🚀 Getting Started
